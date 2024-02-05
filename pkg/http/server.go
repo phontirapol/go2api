@@ -2,9 +2,11 @@ package http
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"go2api/pkg/routes"
+	"go2api/pkg/templates"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -17,10 +19,28 @@ const (
 func initRouter() *mux.Router {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", routes.IndexHandler).
+	tmpl := &templates.Template{}
+	pattern := "static/*.html"
+	err := tmpl.LoadTemplates(pattern)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	handler := &routes.Handler{
+		Template: tmpl,
+	}
+
+	router.HandleFunc("/", handler.IndexHandler).
 		Methods(GET)
-	router.HandleFunc("/places", routes.FindPlacesHandler).
-		Queries("place", "{place-type}", "area", "{area-name}").
+	router.HandleFunc("/places", handler.FindPlacesHandler).
+		Queries(
+			"place", "{place}",
+			"area", "{area}",
+			"radius", "{radius:[0-9]+}",
+			"sort", "{sort}",
+		).
+		Methods(GET)
+	router.HandleFunc("/places", handler.FindPlacesFirstPageHandler).
 		Methods(GET)
 
 	return router
